@@ -1,0 +1,6 @@
+ARCHIVO_CLIENTES = "clientes.csv"
+ARCHIVO_BUSES = "buses.csv"
+ARCHIVO_CIUDADES = "ciudades.csv"
+ARCHIVO_PASAJES = "pasajes.csv"
+ARCHIVO_VIAJES = "viajes.csv"
+ENCODE = "UTF-8"
