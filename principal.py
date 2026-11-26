@@ -1,3 +1,6 @@
+from config import ARCHIVO_BUSES, ARCHIVO_CIUDADES, ENCODE
+from funciones_buses import listar_buses, registrar_buses
+
 while True:
     print("""
 ----MENU INTERACTIVO----
@@ -31,6 +34,7 @@ while True:
             if op_clientes == "4":
                 print("Opcion Finalizada")
                 break
+            
     elif op == "2":
         while True:
             print("""
@@ -43,16 +47,18 @@ while True:
             op_buses = input("Ingrese una opcion: ")
             
             if op_buses == "1":
-                pass
+                registrar_buses()
             if op_buses == "2":
-                pass
+                listar_buses()
             if op_buses == "3":
                 pass
             if op_buses == "4":
                 print("Opcion Finalizada")
                 break
+            
     elif op == "3":
         pass
+    
     elif op == "4":
         while True:
             print("""
@@ -73,6 +79,7 @@ while True:
             if op_viaje == "4":
                 print("Opcion Finalizada")
                 break
+            
     elif op == "5":
         while True:
             print("""
@@ -93,6 +100,7 @@ while True:
             if op_pasajes == "4":
                 print("Opcion Finalizada")
                 break
+            
     elif op == "6":
         while True:
             print("""
