@@ -77,7 +77,7 @@ def registrar_buses() -> None:
     f = open(ARCHIVO_BUSES, "a", encoding=ENCODE)
     if not lista:
         f.write("id_bus,patente,capacidad,estado\n")
-    f.write(f"{id_bus},{patente},{capacidad},{estado}\n")
+    f.write(f"{id_bus},+{patente},{capacidad},{estado}\n")
     f.close()
     print("Bus registrado exitosamente!")
 

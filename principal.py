@@ -1,5 +1,5 @@
 from config import ARCHIVO_BUSES, ARCHIVO_CIUDADES, ENCODE
-from funciones import listar_buses, registrar_buses
+from funciones_buses import listar_buses, registrar_buses
 
 while True:
     print("""
