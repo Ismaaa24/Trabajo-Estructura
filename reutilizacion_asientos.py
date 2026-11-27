@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, Tuple
 from algoritmos import busqueda_secuencial
-from persistencia_benjamin import (
+from persistencia import (
     cargar_buses_csv,
     cargar_ciudades_csv,
     cargar_pasajes_csv,
