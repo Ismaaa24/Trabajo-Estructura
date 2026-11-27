@@ -1,1 +1,7 @@
 id_ciudad, nombre, posicion
+CIU_01,Concepción,0
+CIU_02,Chillán,1
+CIU_03,Linares,2
+CIU_04,Talca,3
+CIU_05,Rancagua,4
+CIU_06,Santiago,5

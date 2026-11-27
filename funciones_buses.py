@@ -81,5 +81,44 @@ def registrar_buses() -> None:
     f.close()
     print("Bus registrado exitosamente!")
 
+def consultar_bus() -> None:
+    while True:
+        try:
+            id_buscado = input("Ingrese el ID del Bus a consultar: ").strip().upper()
+            
+            if id_buscado == "":
+                raise ValueError("El ID del bus no puede estar vacio.")
+            if not id_buscado.startswith("BUS_") or not id_buscado[4:].isdigit():
+                raise ValueError("Use el formato BUS_ seguido de numeros, Ejemplo: BUS_01")
+            break
+        except ValueError as error:
+            print(error)
+            
+    print(f"Buscando {id_buscado}...\n")
+    
+    try:
+        f = open(ARCHIVO_BUSES, "r", encoding= ENCODE)
+    except FileNotFoundError:
+        print(f"No se encontro el archivo de buses: {ARCHIVO_BUSES}")
+        return
+    lista = f.readlines()
+    f.close()
+    
+    for consulta in lista[1:]:
+        if consulta.strip() == "":
+            continue
+        
+        datos = consulta.strip().split(",")
+        if datos[0].strip().upper() == id_buscado:
+            print("---Bus Encontrado---")
+            print(f"""
+ID: {datos[0].strip()}
+Patente: {datos[1].strip()}
+Capacidad: {datos[2].strip()}
+Estado: {datos[3].strip()}
+""")
+            return
+    print("Bus no encontrado")
+        
 def anular_pasaje():
     pass
