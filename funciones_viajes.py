@@ -41,6 +41,12 @@ def registrar_viaje(id_bus: str, fecha: str, hora: str, id_origen: int, id_desti
     f.close()
     return True
 
-def listar_viajes() -> None:
-    for v in leer_archivo("viajes.csv"):
-        print(v[0], v[2], v[3], CIUDADES[int(v[4])], "->", CIUDADES[int(v[5])], "$" + v[6])
+def listar_viajes() -> int:
+    viajes = leer_archivo("viajes.csv")
+
+    for viaje in viajes:
+        id_viaje, id_bus, fecha, hora, origen, destino, tarifa = viaje
+        print(f"Viaje {id_viaje} | Bus {id_bus} | {fecha} {hora} | "
+              f"{CIUDADES[int(origen)]} → {CIUDADES[int(destino)]} | ${tarifa}")
+
+    return len(viajes)
