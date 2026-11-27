@@ -1,27 +1,34 @@
-from typing import Any, Callable, Dict, List, Optional
-
-
-def busqueda_secuencial(
-    registros: List[Dict[str, Any]], clave: str, valor: Any
-) -> Optional[Dict[str, Any]]:
-    valor_norm: str = str(valor).strip().upper()
-    for registro in registros:
-        if str(registro.get(clave, "")).strip().upper() == valor_norm:
-            return registro
+# Busqueda secuencial: recorre la lista y devuelve la primera fila
+# cuya columna coincide con el valor buscado (o None si no esta).
+def busqueda_secuencial(lista, columna, valor):
+    valor = str(valor).strip().upper()
+    for fila in lista:
+        if str(fila[columna]).strip().upper() == valor:
+            return fila
     return None
 
 
-def bubble_sort(
-    datos: List[Dict[str, Any]], clave_comparacion: Callable[[Dict[str, Any]], Any]
-) -> List[Dict[str, Any]]:
-    copia: List[Dict[str, Any]] = list(datos)
-    n: int = len(copia)
+# Arma una lista con los datos de las columnas que se quieren comparar.
+# Los textos se pasan a minuscula para ordenar sin importar mayusculas.
+def crear_clave(fila, columnas):
+    clave = []
+    for c in columnas:
+        dato = fila[c]
+        if isinstance(dato, str):
+            dato = dato.strip().lower()
+        clave.append(dato)
+    return clave
+
+
+# Bubble sort: compara de a dos y los intercambia si estan al reves.
+# "columnas" es la lista de columnas por las que se ordena.
+def bubble_sort(lista, columnas):
+    copia = lista.copy()
+    n = len(copia)
     for i in range(n - 1):
-        intercambiado: bool = False
-        for j in range(0, n - 1 - i):
-            if clave_comparacion(copia[j]) > clave_comparacion(copia[j + 1]):
-                copia[j], copia[j + 1] = copia[j + 1], copia[j]
-                intercambiado = True
-        if not intercambiado:
-            break
+        for j in range(n - 1 - i):
+            if crear_clave(copia[j], columnas) > crear_clave(copia[j + 1], columnas):
+                aux = copia[j]
+                copia[j] = copia[j + 1]
+                copia[j + 1] = aux
     return copia

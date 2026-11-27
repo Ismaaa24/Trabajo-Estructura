@@ -1,371 +1,246 @@
-from typing import Any, Dict, List, Optional, Tuple
-try:
-    from colorama import Fore, Style, init
-except ModuleNotFoundError:
-    from types import SimpleNamespace
-    Fore = SimpleNamespace(CYAN="", BLUE="", GREEN="", RED="", YELLOW="")
-    Style = SimpleNamespace(BRIGHT="", RESET_ALL="")
-else:
-    init(autoreset=True)
 from algoritmos import bubble_sort, busqueda_secuencial
-from persistencia import (
-    cargar_buses_csv,
-    cargar_ciudades_csv,
-    cargar_clientes_csv,
-    cargar_pasajes_csv,
-    cargar_viajes_csv,
-)
-from reutilizacion_asientos import (
-    obtener_ciudad_por_id_o_nombre,
-    validar_sentido_tramo,
-    verificar_reutilizacion_asiento,
-)
+from persistencia import cargar_buses, cargar_ciudades, cargar_clientes
+from persistencia import cargar_pasajes, cargar_viajes
+from funciones_ciudad import obtener_ciudad
+from reutilizacion_asientos import validar_sentido_tramo, verificar_reutilizacion_asiento
 
 
-
-def generar_nomina_viaje(
-    id_viaje: str, criterio_orden: str
-) -> Tuple[bool, str, List[Dict[str, Any]]]:
-    viajes: List[Dict[str, Any]] = cargar_viajes_csv()
-    viaje: Optional[Dict[str, Any]] = busqueda_secuencial(
-        viajes, "id_viaje", id_viaje
-    )
+# Devuelve (ok, mensaje, nomina)
+# cada fila de la nomina: [asiento, ap_paterno, ap_materno, nombres, embarque, destino, pos_embarque]
+def generar_nomina_viaje(id_viaje, criterio):
+    viaje = busqueda_secuencial(cargar_viajes(), 0, id_viaje)
     if viaje is None:
         return False, f"No existe el viaje con ID '{id_viaje}'.", []
 
-    pasajes: List[Dict[str, Any]] = cargar_pasajes_csv()
-    clientes: List[Dict[str, str]] = cargar_clientes_csv()
-    ciudades: List[Dict[str, Any]] = cargar_ciudades_csv()
+    pasajes = cargar_pasajes()
+    clientes = cargar_clientes()
+    ciudades = cargar_ciudades()
 
-    id_viaje_norm: str = str(id_viaje).strip().upper()
-    nomina_sin_ordenar: List[Dict[str, Any]] = []
-
+    nomina = []
     for p in pasajes:
-        if (
-            str(p["id_viaje"]).strip().upper() == id_viaje_norm
-            and str(p["estado"]).strip().upper() == "VIGENTE"
-        ):
-            cliente: Optional[Dict[str, Any]] = busqueda_secuencial(
-                clientes, "id_cliente", p["id_cliente"]
-            )
-            c_orig: Optional[Dict[str, Any]] = obtener_ciudad_por_id_o_nombre(
-                ciudades, p["id_origen"]
-            )
-            c_dest: Optional[Dict[str, Any]] = obtener_ciudad_por_id_o_nombre(
-                ciudades, p["id_destino"]
-            )
+        if p[1].upper() == id_viaje.strip().upper() and p[7].upper() == "VIGENTE":
+            cliente = busqueda_secuencial(clientes, 0, p[2])
+            c_origen = obtener_ciudad(ciudades, p[3])
+            c_destino = obtener_ciudad(ciudades, p[4])
 
-            ap_paterno: str = cliente["apellido_paterno"] if cliente else "Desconocido"
-            ap_materno: str = cliente["apellido_materno"] if cliente else ""
-            nombres: str = cliente["nombres"] if cliente else "Cliente"
-            nombre_orig: str = c_orig["nombre"] if c_orig else str(p["id_origen"])
-            nombre_dest: str = c_dest["nombre"] if c_dest else str(p["id_destino"])
-            pos_orig: int = int(c_orig["posicion"]) if c_orig else 0
+            ap_p = "Desconocido"
+            ap_m = ""
+            nombres = "Cliente"
+            if cliente is not None:
+                nombres = cliente[2]
+                ap_p = cliente[3]
+                ap_m = cliente[4]
 
-            nomina_sin_ordenar.append(
-                {
-                    "asiento": int(p["asiento"]),
-                    "apellido_paterno": ap_paterno,
-                    "apellido_materno": ap_materno,
-                    "nombres": nombres,
-                    "embarque": nombre_orig,
-                    "destino_final": nombre_dest,
-                    "pos_embarque": pos_orig,
-                }
-            )
+            embarque = p[3]
+            pos_embarque = 0
+            if c_origen is not None:
+                embarque = c_origen[1]
+                pos_embarque = c_origen[2]
+            destino = p[4]
+            if c_destino is not None:
+                destino = c_destino[1]
 
-    if not nomina_sin_ordenar:
+            nomina.append([p[5], ap_p, ap_m, nombres, embarque, destino, pos_embarque])
+
+    if len(nomina) == 0:
         return True, "El viaje no tiene pasajes vigentes registrados.", []
 
-    criterio: str = criterio_orden.strip().lower()
+    criterio = criterio.strip().lower()
     if criterio == "a":
-        nomina_ordenada: List[Dict[str, Any]] = bubble_sort(
-            nomina_sin_ordenar,
-            lambda x: (
-                x["apellido_paterno"].lower(),
-                x["apellido_materno"].lower(),
-                x["nombres"].lower(),
-                x["asiento"],
-            ),
-        )
+        ordenada = bubble_sort(nomina, [1, 2, 3, 0])   # ap. paterno
     elif criterio == "b":
-        nomina_ordenada = bubble_sort(
-            nomina_sin_ordenar,
-            lambda x: (
-                x["nombres"].lower(),
-                x["apellido_paterno"].lower(),
-                x["apellido_materno"].lower(),
-                x["asiento"],
-            ),
-        )
+        ordenada = bubble_sort(nomina, [3, 1, 2, 0])   # nombres
     elif criterio == "c":
-        nomina_ordenada = bubble_sort(
-            nomina_sin_ordenar,
-            lambda x: (
-                x["asiento"],
-                x["pos_embarque"],
-                x["apellido_paterno"].lower(),
-            ),
-        )
+        ordenada = bubble_sort(nomina, [0, 6, 1])      # asiento
     else:
         return False, "Criterio de ordenamiento inválido. Use 'a', 'b' o 'c'.", []
 
-    return True, "Nómina generada exitosamente.", nomina_ordenada
+    return True, "Nómina generada exitosamente.", ordenada
 
 
-def obtener_reporte_pasajes_y_recaudacion(
-    id_viaje: str,
-) -> Tuple[bool, str, Dict[str, Any]]:
-    viajes: List[Dict[str, Any]] = cargar_viajes_csv()
-    viaje: Optional[Dict[str, Any]] = busqueda_secuencial(
-        viajes, "id_viaje", id_viaje
-    )
+# Devuelve (ok, mensaje, lista_pasajes, recaudacion_vigente, total_vigentes, total_anulados)
+def obtener_reporte_pasajes_y_recaudacion(id_viaje):
+    viaje = busqueda_secuencial(cargar_viajes(), 0, id_viaje)
     if viaje is None:
-        return False, f"No existe el viaje con ID '{id_viaje}'.", {}
+        return False, f"No existe el viaje con ID '{id_viaje}'.", [], 0, 0, 0
 
-    pasajes: List[Dict[str, Any]] = cargar_pasajes_csv()
-    clientes: List[Dict[str, str]] = cargar_clientes_csv()
-    ciudades: List[Dict[str, Any]] = cargar_ciudades_csv()
+    clientes = cargar_clientes()
+    ciudades = cargar_ciudades()
 
-    id_viaje_norm: str = str(id_viaje).strip().upper()
-    lista_pasajes: List[Dict[str, Any]] = []
-    recaudacion_vigente: int = 0
-    total_vigentes: int = 0
-    total_anulados: int = 0
+    lista = []
+    recaudacion = 0
+    vigentes = 0
+    anulados = 0
 
-    for p in pasajes:
-        if str(p["id_viaje"]).strip().upper() == id_viaje_norm:
-            cliente: Optional[Dict[str, Any]] = busqueda_secuencial(
-                clientes, "id_cliente", p["id_cliente"]
-            )
-            c_orig: Optional[Dict[str, Any]] = obtener_ciudad_por_id_o_nombre(
-                ciudades, p["id_origen"]
-            )
-            c_dest: Optional[Dict[str, Any]] = obtener_ciudad_por_id_o_nombre(
-                ciudades, p["id_destino"]
-            )
+    for p in cargar_pasajes():
+        if p[1].upper() == id_viaje.strip().upper():
+            cliente = busqueda_secuencial(clientes, 0, p[2])
+            c_origen = obtener_ciudad(ciudades, p[3])
+            c_destino = obtener_ciudad(ciudades, p[4])
 
-            nombre_cli: str = (
-                f"{cliente['nombres']} {cliente['apellido_paterno']}"
-                if cliente
-                else f"ID {p['id_cliente']}"
-            )
-            estado: str = str(p["estado"]).strip().upper()
-            valor: int = int(p["valor"])
+            nombre = "ID " + p[2]
+            if cliente is not None:
+                nombre = cliente[2] + " " + cliente[3]
+            origen = p[3]
+            if c_origen is not None:
+                origen = c_origen[1]
+            destino = p[4]
+            if c_destino is not None:
+                destino = c_destino[1]
 
+            estado = p[7].upper()
             if estado == "VIGENTE":
-                recaudacion_vigente += valor
-                total_vigentes += 1
+                recaudacion = recaudacion + p[6]
+                vigentes = vigentes + 1
             else:
-                total_anulados += 1
+                anulados = anulados + 1
 
-            lista_pasajes.append(
-                {
-                    "id_pasaje": p["id_pasaje"],
-                    "asiento": int(p["asiento"]),
-                    "cliente": nombre_cli,
-                    "origen": c_orig["nombre"] if c_orig else str(p["id_origen"]),
-                    "destino": c_dest["nombre"] if c_dest else str(p["id_destino"]),
-                    "valor": valor,
-                    "estado": estado,
-                }
-            )
+            lista.append([p[0], p[5], nombre, origen, destino, p[6], estado])
 
-    reporte: Dict[str, Any] = {
-        "pasajes": lista_pasajes,
-        "recaudacion_vigente": recaudacion_vigente,
-        "total_vigentes": total_vigentes,
-        "total_anulados": total_anulados,
-    }
-    return True, "Reporte generado correctamente.", reporte
+    return True, "Reporte generado correctamente.", lista, recaudacion, vigentes, anulados
 
 
-def consultar_ocupacion_por_tramo(
-    id_viaje: str, id_origen: str, id_destino: str
-) -> Tuple[bool, str, Dict[str, Any]]:
-    viajes: List[Dict[str, Any]] = cargar_viajes_csv()
-    viaje: Optional[Dict[str, Any]] = busqueda_secuencial(
-        viajes, "id_viaje", id_viaje
-    )
+# Devuelve (ok, mensaje, tramo, capacidad, disponibles, ocupados)
+def consultar_ocupacion_por_tramo(id_viaje, id_origen, id_destino):
+    viaje = busqueda_secuencial(cargar_viajes(), 0, id_viaje)
     if viaje is None:
-        return False, f"No existe el viaje con ID '{id_viaje}'.", {}
+        return False, f"No existe el viaje con ID '{id_viaje}'.", "", 0, [], []
 
-    buses: List[Dict[str, Any]] = cargar_buses_csv()
-    bus: Optional[Dict[str, Any]] = busqueda_secuencial(
-        buses, "id_bus", viaje["id_bus"]
-    )
+    bus = busqueda_secuencial(cargar_buses(), 0, viaje[1])
     if bus is None:
-        return False, "No se encontró el bus asignado al viaje.", {}
+        return False, "No se encontró el bus asignado al viaje.", "", 0, [], []
 
-    ciudades: List[Dict[str, Any]] = cargar_ciudades_csv()
-    c_v_orig: Optional[Dict[str, Any]] = obtener_ciudad_por_id_o_nombre(
-        ciudades, viaje["id_origen"]
-    )
-    c_v_dest: Optional[Dict[str, Any]] = obtener_ciudad_por_id_o_nombre(
-        ciudades, viaje["id_destino"]
-    )
-    c_p_orig: Optional[Dict[str, Any]] = obtener_ciudad_por_id_o_nombre(
-        ciudades, id_origen
-    )
-    c_p_dest: Optional[Dict[str, Any]] = obtener_ciudad_por_id_o_nombre(
-        ciudades, id_destino
-    )
+    ciudades = cargar_ciudades()
+    c_v_origen = obtener_ciudad(ciudades, viaje[4])
+    c_v_destino = obtener_ciudad(ciudades, viaje[5])
+    c_p_origen = obtener_ciudad(ciudades, id_origen)
+    c_p_destino = obtener_ciudad(ciudades, id_destino)
 
-    if not all([c_v_orig, c_v_dest, c_p_orig, c_p_dest]):
-        return False, "Ciudad de origen o destino no válida.", {}
+    if c_v_origen is None or c_v_destino is None or c_p_origen is None or c_p_destino is None:
+        return False, "Ciudad de origen o destino no válida.", "", 0, [], []
 
-    assert c_v_orig is not None
-    assert c_v_dest is not None
-    assert c_p_orig is not None
-    assert c_p_dest is not None
+    if not validar_sentido_tramo(c_v_origen[2], c_v_destino[2], c_p_origen[2], c_p_destino[2]):
+        return False, "El tramo ingresado no respeta el sentido del viaje.", "", 0, [], []
 
-    if not validar_sentido_tramo(
-        int(c_v_orig["posicion"]),
-        int(c_v_dest["posicion"]),
-        int(c_p_orig["posicion"]),
-        int(c_p_dest["posicion"]),
-    ):
-        return False, "El tramo ingresado no respeta el sentido del viaje.", {}
-
-    capacidad: int = int(bus["capacidad"])
-    disponibles: List[int] = []
-    ocupados: List[int] = []
-
+    capacidad = bus[2]
+    disponibles = []
+    ocupados = []
     for asiento in range(1, capacidad + 1):
-        libre, _ = verificar_reutilizacion_asiento(
-            id_viaje, id_origen, id_destino, asiento
-        )
+        libre, mensaje = verificar_reutilizacion_asiento(id_viaje, id_origen, id_destino, asiento)
         if libre:
             disponibles.append(asiento)
         else:
             ocupados.append(asiento)
 
-    resultado: Dict[str, Any] = {
-        "tramo": f"{c_p_orig['nombre']} -> {c_p_dest['nombre']}",
-        "capacidad": capacidad,
-        "disponibles": disponibles,
-        "ocupados": ocupados,
-    }
-    return True, "Consulta realizada exitosamente.", resultado
+    tramo = c_p_origen[1] + " -> " + c_p_destino[1]
+    return True, "Consulta realizada exitosamente.", tramo, capacidad, disponibles, ocupados
 
 
-def submenu_consultas_y_reportes() -> None:
+def submenu_consultas_y_reportes():
     while True:
-        print(f"\n{Fore.CYAN}{Style.BRIGHT}--- CONSULTAS, NÓMINAS Y REPORTES ---{Style.RESET_ALL}")
-        print("1. Nómina de pasajeros por viaje (RF08)")
-        print("2. Listado general de clientes, buses y viajes programados (RF09)")
-        print("3. Pasajes vigentes/anulados y recaudación vigente de un viaje (RF09)")
-        print("4. Ocupación y disponibilidad de asientos por tramo (RF06 / RF09)")
+        print("\n--- CONSULTAS, NÓMINAS Y REPORTES ---")
+        print("1. Nómina de pasajeros por viaje")
+        print("2. Listado general de clientes, buses y viajes programados")
+        print("3. Pasajes vigentes/anulados y recaudación vigente de un viaje")
+        print("4. Ocupación y disponibilidad de asientos por tramo")
         print("5. Volver")
 
-        opcion: str = input("Ingrese una opción: ").strip()
+        opcion = input("Ingrese una opción: ").strip()
 
         if opcion == "1":
-            id_viaje: str = input("Ingrese ID del viaje: ").strip()
+            id_viaje = input("Ingrese ID del viaje: ").strip()
             print("Ordenar nómina por:")
             print("  (a) Apellido paterno alfabético ascendente")
             print("  (b) Nombres alfabético ascendente")
             print("  (c) Número de asiento numérico ascendente")
-            criterio: str = input("Seleccione criterio (a/b/c): ").strip().lower()
+            criterio = input("Seleccione criterio (a/b/c): ").strip().lower()
 
             ok, msg, nomina = generar_nomina_viaje(id_viaje, criterio)
             if not ok:
-                print(f"{Fore.RED}[ERROR] {msg}{Style.RESET_ALL}")
-            elif not nomina:
-                print(f"{Fore.YELLOW}[AVISO] {msg}{Style.RESET_ALL}")
+                print("[ERROR]", msg)
+            elif len(nomina) == 0:
+                print("[AVISO]", msg)
             else:
-                print(
-                    f"\n{Fore.BLUE}{Style.BRIGHT}Asiento | Ap. Paterno    | Ap. Materno    | Nombres          | Embarque     | Destino Final{Style.RESET_ALL}"
-                )
+                print("\nAsiento | Ap. Paterno    | Ap. Materno    | Nombres          | Embarque     | Destino Final")
                 print("-" * 92)
                 for fila in nomina:
-                    print(
-                        f"{fila['asiento']:<7} | {fila['apellido_paterno']:<14} | "
-                        f"{fila['apellido_materno']:<14} | {fila['nombres']:<16} | "
-                        f"{fila['embarque']:<12} | {fila['destino_final']}"
-                    )
+                    print(f"{fila[0]:<7} | {fila[1]:<14} | {fila[2]:<14} | "
+                          f"{fila[3]:<16} | {fila[4]:<12} | {fila[5]}")
 
         elif opcion == "2":
-            clientes: List[Dict[str, str]] = cargar_clientes_csv()
-            buses: List[Dict[str, Any]] = cargar_buses_csv()
-            viajes: List[Dict[str, Any]] = cargar_viajes_csv()
-            ciudades: List[Dict[str, Any]] = cargar_ciudades_csv()
+            clientes = cargar_clientes()
+            buses = cargar_buses()
+            viajes = cargar_viajes()
+            ciudades = cargar_ciudades()
 
-            print(f"\n{Fore.CYAN}{Style.BRIGHT}=== CLIENTES REGISTRADOS ({len(clientes)}) ==={Style.RESET_ALL}")
-            if not clientes:
-                print(f"{Fore.YELLOW}[AVISO] Sin clientes registrados.{Style.RESET_ALL}")
+            print(f"\n=== CLIENTES REGISTRADOS ({len(clientes)}) ===")
+            if len(clientes) == 0:
+                print("[AVISO] Sin clientes registrados.")
             else:
-                print(f"{Fore.BLUE}{Style.BRIGHT}ID   | RUT          | Nombre Completo                | Contacto{Style.RESET_ALL}")
+                print("ID   | RUT          | Nombre Completo                | Contacto")
                 for c in clientes:
-                    nombre_c: str = f"{c['nombres']} {c['apellido_paterno']} {c['apellido_materno']}"
-                    print(f"{c['id_cliente']:<4} | {c['rut']:<12} | {nombre_c:<30} | {c['contacto']}")
+                    nombre = c[2] + " " + c[3] + " " + c[4]
+                    print(f"{c[0]:<4} | {c[1]:<12} | {nombre:<30} | {c[5]}")
 
-            print(f"\n{Fore.CYAN}{Style.BRIGHT}=== BUSES REGISTRADOS ({len(buses)}) ==={Style.RESET_ALL}")
-            if not buses:
-                print(f"{Fore.YELLOW}[AVISO] Sin buses registrados.{Style.RESET_ALL}")
+            print(f"\n=== BUSES REGISTRADOS ({len(buses)}) ===")
+            if len(buses) == 0:
+                print("[AVISO] Sin buses registrados.")
             else:
-                print(f"{Fore.BLUE}{Style.BRIGHT}ID BUS   | Patente | Capacidad | Estado{Style.RESET_ALL}")
+                print("ID BUS   | Patente | Capacidad | Estado")
                 for b in buses:
-                    print(f"{b['id_bus']:<8} | {b['patente']:<7} | {b['capacidad']:<9} | {b['estado']}")
+                    print(f"{b[0]:<8} | {b[1]:<7} | {b[2]:<9} | {b[3]}")
 
-            print(f"\n{Fore.CYAN}{Style.BRIGHT}=== VIAJES PROGRAMADOS ({len(viajes)}) ==={Style.RESET_ALL}")
-            if not viajes:
-                print(f"{Fore.YELLOW}[AVISO] Sin viajes programados.{Style.RESET_ALL}")
+            print(f"\n=== VIAJES PROGRAMADOS ({len(viajes)}) ===")
+            if len(viajes) == 0:
+                print("[AVISO] Sin viajes programados.")
             else:
-                print(f"{Fore.BLUE}{Style.BRIGHT}ID VIAJE | Bus      | Fecha      | Hora  | Recorrido                 | Tarifa Base{Style.RESET_ALL}")
+                print("ID VIAJE | Bus      | Fecha      | Hora  | Recorrido                 | Tarifa Base")
                 for v in viajes:
-                    c_o = obtener_ciudad_por_id_o_nombre(ciudades, v["id_origen"])
-                    c_d = obtener_ciudad_por_id_o_nombre(ciudades, v["id_destino"])
-                    n_o: str = c_o["nombre"] if c_o else str(v["id_origen"])
-                    n_d: str = c_d["nombre"] if c_d else str(v["id_destino"])
-                    print(
-                        f"{v['id_viaje']:<8} | {v['id_bus']:<8} | {v['fecha']:<10} | "
-                        f"{v['hora']:<5} | {n_o} -> {n_d:<12} | ${v['tarifa_base']:,}"
-                    )
+                    c_o = obtener_ciudad(ciudades, v[4])
+                    c_d = obtener_ciudad(ciudades, v[5])
+                    nombre_o = v[4]
+                    nombre_d = v[5]
+                    if c_o is not None:
+                        nombre_o = c_o[1]
+                    if c_d is not None:
+                        nombre_d = c_d[1]
+                    print(f"{v[0]:<8} | {v[1]:<8} | {v[2]:<10} | {v[3]:<5} | "
+                          f"{nombre_o} -> {nombre_d:<12} | ${v[6]:,}")
 
         elif opcion == "3":
             id_viaje = input("Ingrese ID del viaje: ").strip()
-            ok, msg, rep = obtener_reporte_pasajes_y_recaudacion(id_viaje)
+            ok, msg, lista, recaudacion, vigentes, anulados = obtener_reporte_pasajes_y_recaudacion(id_viaje)
             if not ok:
-                print(f"{Fore.RED}[ERROR] {msg}{Style.RESET_ALL}")
+                print("[ERROR]", msg)
             else:
-                print(
-                    f"\n{Fore.BLUE}{Style.BRIGHT}ID Pasaje | Asiento | Cliente              | Tramo                     | Valor   | Estado{Style.RESET_ALL}"
-                )
+                print("\nID Pasaje | Asiento | Cliente              | Tramo                     | Valor   | Estado")
                 print("-" * 92)
-                for p in rep["pasajes"]:
-                    tramo: str = f"{p['origen']} -> {p['destino']}"
-                    color: str = Fore.GREEN if p["estado"] == "VIGENTE" else Fore.RED
-                    print(
-                        f"{p['id_pasaje']:<9} | {p['asiento']:<7} | {p['cliente']:<20} | "
-                        f"{tramo:<25} | ${p['valor']:<6,} | {color}{p['estado']}{Style.RESET_ALL}"
-                    )
+                for p in lista:
+                    tramo = p[3] + " -> " + p[4]
+                    print(f"{p[0]:<9} | {p[1]:<7} | {p[2]:<20} | {tramo:<25} | ${p[5]:<6,} | {p[6]}")
                 print("-" * 92)
-                print(
-                    f"{Fore.GREEN}{Style.BRIGHT}[OK] Vigentes: {rep['total_vigentes']} | "
-                    f"Anulados: {rep['total_anulados']} | "
-                    f"Recaudación vigente: ${rep['recaudacion_vigente']:,} CLP{Style.RESET_ALL}"
-                )
+                print(f"[OK] Vigentes: {vigentes} | Anulados: {anulados} | "
+                      f"Recaudación vigente: ${recaudacion:,} CLP")
 
         elif opcion == "4":
             id_viaje = input("Ingrese ID del viaje: ").strip()
-            ciudades = cargar_ciudades_csv()
-            print(f"\n{Fore.BLUE}{Style.BRIGHT}ID | Ciudad       | Posición{Style.RESET_ALL}")
+            ciudades = cargar_ciudades()
+            print("\nID | Ciudad       | Posición")
             for c in ciudades:
-                print(f"{c['id_ciudad']:<2} | {c['nombre']:<12} | {c['posicion']}")
+                print(f"{c[0]:<2} | {c[1]:<12} | {c[2]}")
 
-            id_orig: str = input("Ingrese ID o nombre ciudad de embarque: ").strip()
-            id_dest: str = input("Ingrese ID o nombre ciudad de destino: ").strip()
-            ok, msg, datos = consultar_ocupacion_por_tramo(id_viaje, id_orig, id_dest)
+            id_orig = input("Ingrese ID o nombre ciudad de embarque: ").strip()
+            id_dest = input("Ingrese ID o nombre ciudad de destino: ").strip()
+            ok, msg, tramo, capacidad, disponibles, ocupados = consultar_ocupacion_por_tramo(id_viaje, id_orig, id_dest)
             if not ok:
-                print(f"{Fore.RED}[ERROR] {msg}{Style.RESET_ALL}")
+                print("[ERROR]", msg)
             else:
-                print(f"\n{Fore.CYAN}Tramo: {datos['tramo']} (Capacidad: {datos['capacidad']}){Style.RESET_ALL}")
-                print(f"{Fore.GREEN}Disponibles ({len(datos['disponibles'])}): {datos['disponibles']}{Style.RESET_ALL}")
-                print(f"{Fore.RED}Ocupados ({len(datos['ocupados'])}): {datos['ocupados']}{Style.RESET_ALL}")
+                print(f"\nTramo: {tramo} (Capacidad: {capacidad})")
+                print(f"Disponibles ({len(disponibles)}): {disponibles}")
+                print(f"Ocupados ({len(ocupados)}): {ocupados}")
 
         elif opcion == "5":
             print("Opción Finalizada")
             break
         else:
-            print(f"{Fore.RED}Opción inválida, ingrese otra nuevamente.{Style.RESET_ALL}")
+            print("Opción inválida, ingrese otra nuevamente.")
