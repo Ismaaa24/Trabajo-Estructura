@@ -2,6 +2,8 @@ def registrar_cliente(id:int,RUT:str,nombre:str,apellidoP:str,apellidoM:str,cont
     repo = "clientes.csv"
     encode = "UTF-8"
     f = open(repo,"a",encoding= encode)
+    if f.tell() == 0:
+        f.write("id,rut,nombres,apellido_paterno,apellido_materno,contacto\n")
     f.write(f"{id},{RUT},{nombre},{apellidoP},{apellidoM},{contacto}\n")
     f.close()
 
@@ -9,7 +11,10 @@ def lista_De_clientes():
     repo = "clientes.csv"
     encode = "UTF-8"
     clientes = [] 
-    f = open(repo,"r",encoding= encode)
+    try:
+        f = open(repo,"r",encoding= encode)
+    except FileNotFoundError:
+        return []
     x = f.readlines()
     f.close()
     for info in x[1:]:

@@ -1,14 +1,12 @@
-from os import system
-id = 100
+from nomina_y_reporte import submenu_consultas_y_reportes
 from config import ARCHIVO_BUSES, ARCHIVO_CIUDADES, ENCODE
 from funciones_buses import listar_buses, registrar_buses, consultar_bus
 from funciones_clientes import registrar_cliente, lista_De_clientes, listar_clientes, buscar_cliente, pedir_id_cliente, pedir_texto
 from funciones_ciudad import listar_ciudades
 from funciones_pasajes import vender_pasaje, anular_pasaje
-from funciones_viajes import registrar_viaje, listar_viajes
+from funciones_viajes import registrar_viaje, listar_viajes, consultar_viaje
 
 while True:
-    system("cls")
     print("""
 ----MENU INTERACTIVO----
 1. Clientes
@@ -33,38 +31,23 @@ while True:
             op_clientes = input("Ingrese una opcion: ")
             
             if op_clientes == "1":
-                while True:
-                    try:
-                        rut = input("Ingrese su RUT -> ")
-                        if rut == "":
-                            raise Exception("Por favor complete el campo solicitado...")
-                        respuesta = buscar_cliente(rut)
-                        if respuesta is not None:
-                            print("Cliente ya registrado...")
-                            break
-                        nombre = input("Ingrese su nombre -> ").capitalize()
-                        if nombre == "":
-                            raise Exception("Por favor complete el campo solicitado...")
-                        apellidoP = input("Ingrese su apellido paterno -> ").capitalize()
-                        if apellidoP == "":
-                            raise Exception("Por favor complete el campo solicitado...")
-                        apellidoM = input("Ingrese su apellido materno -> ").capitalize()
-                        if apellidoM == "":
-                            raise Exception("Por favor complete el campo solicitado...")
-                        contacto = input("Ingrese su contacto de preferencia -> ")
-                        if contacto == "":
-                            raise Exception("Por favor complete el campo solicitado...")
-                        id += 1
-                        registrar_cliente(id,rut,nombre,apellidoP,apellidoM,contacto)
-                        input("Cliente registrado con exito, presione cualquier tecla para continuar...")
-                        break
-                    except Exception as err:
-                        print(err)
+                rut = pedir_texto("el RUT").upper()
+                if buscar_cliente(rut) is not None:
+                    print("Cliente ya registrado.")
+                    continue
+                nombre = pedir_texto("el nombre")
+                apellido_p = pedir_texto("el apellido paterno")
+                apellido_m = pedir_texto("el apellido materno")
+                contacto = pedir_texto("el contacto")
+                clientes = lista_De_clientes()
+                id_cliente = max((int(c[0]) for c in clientes), default=100) + 1
+                registrar_cliente(id_cliente, rut, nombre, apellido_p, apellido_m, contacto)
+                print("Cliente registrado.")
             if op_clientes == "2":
                 listar_clientes()
             if op_clientes == "3":
                 
-                buscar = input("Ingrese el rut del cliente a buscar ->")
+                buscar = pedir_texto("el RUT a buscar").upper()
                 respuesta = buscar_cliente(buscar)
                 if respuesta is not None:
                     print(respuesta)
@@ -134,7 +117,9 @@ while True:
                 if cantidad == 0:
                     print("No hay viajes programados.")
             if op_viaje == "3":
-                pass
+                id_viaje = pedir_texto("el ID del viaje")
+                if not consultar_viaje(id_viaje):
+                    print("Viaje no encontrado.")
             if op_viaje == "4":
                 print("Opcion Finalizada")
                 break
@@ -189,25 +174,7 @@ while True:
                 break
             
     elif op == "6":
-        while True:
-            print("""
----Consultas y Reportes---
-1. Registrar Cliente
-2. Listar Cliente
-3. Buscar Cliente
-4. Volver """)
-            
-            op_consulta = input("Ingrese una opcion: ")
-            
-            if op_consulta == "1":
-                pass
-            if op_consulta == "2":
-                pass
-            if op_consulta == "3":
-                pass
-            if op_consulta == "4":
-                print("Opcion Finalizada")
-                break
+        submenu_consultas_y_reportes()
     elif op == "0":
         print("Programa finalizado")
         break

@@ -1,3 +1,4 @@
+from reutilizacion_asientos import verificar_reutilizacion_asiento
 from funciones_clientes import buscar_cliente
 from funciones_viajes import leer_archivo
 from config import ARCHIVO_PASAJES, ENCODE
@@ -17,25 +18,11 @@ def vender_pasaje(id_viaje: str, rut: str, origen: int, destino: int, asiento: i
         print("El cliente no existe")
         return False
 
-    if origen < 0 or origen > 5 or destino < 0 or destino > 5:
-        print("Ciudad inválida")
-        return False
-
-    # El tramo debe ir en el mismo sentido que el viaje
-    if int(viaje[4]) == 0:
-        sentido_correcto = origen < destino
-    else:
-        sentido_correcto = origen > destino
-    if not sentido_correcto:
-        print("El tramo no respeta el sentido del viaje")
-        return False
-
-    capacidad = 0
-    for b in leer_archivo("buses.csv"):
-        if b[0] == viaje[1]:
-            capacidad = int(b[2])
-    if asiento < 1 or asiento > capacidad:
-        print("El asiento está fuera de la capacidad del bus")
+    disponible, mensaje = verificar_reutilizacion_asiento(
+        id_viaje, str(origen), str(destino), asiento
+    )
+    if not disponible:
+        print(mensaje)
         return False
 
     # Precio: 10% de descuento por cada segmento (de 5) que no se usa
