@@ -1,9 +1,13 @@
+from os import system
+from clientes import registrar_cliente,lista_De_clientes,Bubble_sort,listar_clientes,buscar_cliente
+id = 100
 from config import ARCHIVO_BUSES, ARCHIVO_CIUDADES, ENCODE
 from funciones_buses import listar_buses, registrar_buses, consultar_bus
 from funciones_clientes import registrar_cliente, lista_De_clientes, listar_clientes, buscar_cliente, pedir_id_cliente, pedir_texto
 from funciones_ciudades import listar_ciudades
 
 while True:
+    system("cls")
     print("""
 ----MENU INTERACTIVO----
 1. Clientes
@@ -28,29 +32,11 @@ while True:
             op_clientes = input("Ingrese una opcion: ")
             
             if op_clientes == "1":
-                id_cliente = pedir_id_cliente()
-                rut = pedir_texto("el RUT").upper()
-                nombre = pedir_texto("el nombre")
-                apellido_p = pedir_texto("el apellido paterno")
-                apellido_m = pedir_texto("el apellido materno")
-                contacto = pedir_texto("el contacto")
-
-                registrar_cliente(id_cliente, rut, nombre, apellido_p, apellido_m, contacto)
-                print("Cliente registrado.")
-                
+                pass
             if op_clientes == "2":
-                listar_clientes()
-                
+                pass
             if op_clientes == "3":
-                rut = pedir_texto("el RUT a buscar: ").upper()
-                cliente = buscar_cliente(rut)
-                
-                if cliente is None:
-                    print("Cliente no encontrado.")
-                else:
-                    print(f"Cliente encontrado: {cliente[2].strip()}"
-                          f" {cliente[3].strip()} {cliente[4].strip()}")
-                        
+                pass
             if op_clientes == "4":
                 print("Opcion Finalizada")
                 break

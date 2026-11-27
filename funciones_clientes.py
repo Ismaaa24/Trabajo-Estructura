@@ -1,12 +1,12 @@
 def registrar_cliente(id:int,RUT:str,nombre:str,apellidoP:str,apellidoM:str,contacto:str)-> None:
-    repo = "clientes.csv"
+    repo = "repositorio clientes.csv"
     encode = "UTF-8"
     f = open(repo,"a",encoding= encode)
     f.write(f"{id},{RUT},{nombre},{apellidoP},{apellidoM},{contacto}\n")
     f.close()
 
 def lista_De_clientes():
-    repo = "clientes.csv"
+    repo = "repositorio clientes.csv"
     encode = "UTF-8"
     clientes = [] 
     f = open(repo,"r",encoding= encode)
